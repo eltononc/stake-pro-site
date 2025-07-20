@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Portfólios - Stake Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-y: auto;
+        }
+        #backgroundCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+        .cover-preview {
+            width: 100%;
+            height: 128px;
+            background-color: #334155;
+        }
+        @media (max-width: 768px) {
+            .responsive-table thead { display: none; }
+            .responsive-table tr { display: block; margin-bottom: 1rem; border-bottom: 2px solid #1e293b; padding-bottom: 1rem; }
+            .responsive-table td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #334155; }
+            .responsive-table td:last-child { border-bottom: none; }
+            .responsive-table td::before { content: attr(data-label); font-weight: 600; margin-right: 1rem; color: #94a3b8; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900">
+    
+    <canvas id="backgroundCanvas"></canvas>
+
+    <div id="redirectOverlay" class="hidden fixed inset-0 bg-slate-900 flex-col items-center justify-center text-center p-4 z-50">
+        <h2 class="text-2xl font-bold text-white mb-4">Acesso Negado</h2>
+        <p class="text-slate-300">Você não está autenticado.</p>
+    </div>
+
+    <div class="flex flex-col min-h-screen" id="main-container">
+        <!-- Navbar Integrada -->
+        <header class="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3"><defs><filter id="dropshadow"><feDropShadow dx="3" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.4"/></filter><linearGradient id="blueGradient1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#007bff;stop-opacity:1" /><stop offset="100%" style="stop-color:#0056b3;stop-opacity:1" /></linearGradient><linearGradient id="greenGradient1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#28a745;stop-opacity:1" /><stop offset="100%" style="stop-color:#1e7e34;stop-opacity:1" /></linearGradient></defs><g filter="url(#dropshadow)"><path d="M 50 5 C 20 5 5 20 5 50 C 5 80 20 95 50 95 C 80 95 95 80 95 50 C 95 20 80 5 50 5 Z" fill="url(#blueGradient1)"/><path d="M 50 5 C 50 5 70 15 80 30 C 90 45 80 65 70 70 C 60 75 40 85 20 80 C 0 75 5 50 5 50" fill="url(#greenGradient1)"/></g></svg>
+                            <h1 class="text-white font-bold text-lg" style="font-family: 'Montserrat', sans-serif;">Stake <span class="text-green-400">Pro</span></h1>
+                        </div>
+                        <nav class="hidden md:block ml-10">
+                            <div class="flex items-baseline space-x-4">
+                                <a href="dashboard.html" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                                <a href="users.html" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Usuários</a>
+                                <a href="portfolio.html" class="text-white bg-slate-800 px-3 py-2 rounded-md text-sm font-medium" aria-current="page">Portfólio</a>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="hidden md:block">
+                         <div class="ml-4 flex items-center md:ml-6">
+                            <span class="text-slate-300 text-sm mr-3">Olá, <strong id="welcome-name">Admin</strong>!</span>
+                            <button id="logoutButton" class="bg-slate-700 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Sair</button>
+                        </div>
+                    </div>
+                    <div class="-mr-2 flex md:hidden">
+                        <button id="mobile-menu-button" type="button" class="bg-slate-800 inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white" aria-controls="mobile-menu" aria-expanded="false">
+                            <span class="sr-only">Abrir menu</span>
+                            <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="dashboard.html" class="text-slate-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
+                    <a href="users.html" class="text-slate-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Usuários</a>
+                    <a href="portfolio.html" class="text-white bg-slate-800 block px-3 py-2 rounded-md text-base font-medium" aria-current="page">Portfólio</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-slate-700">
+                    <div class="flex items-center px-5">
+                        <div class="ml-3"><div class="text-base font-medium leading-none text-white" id="welcome-name-mobile">Administrador</div></div>
+                    </div>
+                    <div class="mt-3 px-2 space-y-1">
+                        <a href="#" id="logoutButtonMobile" class="block px-3 py-2 rounded-md text-base font-medium text-slate-400 hover:text-white hover:bg-slate-700">Sair</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow p-4 md:p-6">
+            <div class="max-w-7xl mx-auto">
+                <header class="flex justify-between items-center mb-8">
+                    <h1 class="text-3xl font-bold">Gerenciamento de Portfólios</h1>
+                    <button id="addPortfolioBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <svg class="w-5 h-5 mr-0 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        <span class="hidden md:inline">Adicionar Portfólio</span>
+                    </button>
+                </header>
+                <div class="bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-lg overflow-x-auto">
+                    <table class="min-w-full responsive-table">
+                        <thead class="bg-slate-700/50">
+                            <tr>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Capa</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Nome</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Descrição</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="portfolioTableBody" class="divide-y divide-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="portfolioModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-lg p-6 md:p-8">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Adicionar Novo Portfólio</h2>
+            <form id="portfolioForm">
+                <input type="hidden" id="portfolioId">
+                <div class="mb-4">
+                     <label for="coverImage" class="block text-sm font-medium text-slate-300 mb-2">Imagem de Capa (Opcional)</label>
+                    <img id="coverPreview" src="https://placehold.co/600x300/334155/e2e8f0?text=Capa" class="cover-preview rounded-lg object-cover mb-2">
+                    <input type="file" id="coverImage" name="coverImage" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700">
+                </div>
+                <div class="mb-4">
+                    <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Nome do Portfólio</label>
+                    <input type="text" id="name" name="name" required class="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="mb-6">
+                    <label for="description" class="block text-sm font-medium text-slate-300 mb-2">Descrição</label>
+                    <textarea id="description" name="description" rows="3" class="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500"></textarea>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" id="cancelBtn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const mainContainer = document.getElementById('main-container');
+        const redirectOverlay = document.getElementById('redirectOverlay');
+        const isPreview = window.location.protocol === 'blob:' || window.location.hostname.includes('usercontent.goog');
+        
+        if (localStorage.getItem('isAdminLoggedIn') !== 'true') {
+            if (isPreview) {
+                mainContainer.classList.add('hidden');
+                redirectOverlay.classList.remove('hidden');
+            } else {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('isAdminLoggedIn');
+            localStorage.removeItem('loggedInUserName');
+            if (isPreview) {
+                mainContainer.classList.add('hidden');
+                redirectOverlay.classList.remove('hidden');
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+        document.getElementById('logoutButton').addEventListener('click', handleLogout);
+        document.getElementById('logoutButtonMobile').addEventListener('click', handleLogout);
+
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+
+        const portfolioTableBody = document.getElementById('portfolioTableBody');
+        const addPortfolioBtn = document.getElementById('addPortfolioBtn');
+        const portfolioModal = document.getElementById('portfolioModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const portfolioForm = document.getElementById('portfolioForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const portfolioIdInput = document.getElementById('portfolioId');
+        const coverImageInput = document.getElementById('coverImage');
+        const coverPreview = document.getElementById('coverPreview');
+
+        const db = {
+            getPortfolios: () => JSON.parse(localStorage.getItem('portfolios')) || [],
+            savePortfolios: (portfolios) => localStorage.setItem('portfolios', JSON.stringify(portfolios))
+        };
+
+        let portfoliosCache = [];
+
+        function renderTable() {
+            const portfolios = db.getPortfolios();
+            portfoliosCache = portfolios;
+            portfolioTableBody.innerHTML = '';
+            if (portfolios.length === 0) {
+                portfolioTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">Nenhum portfólio cadastrado.</td></tr>';
+                return;
+            }
+            portfolios.forEach(p => {
+                const coverSrc = p.coverImage ? p.coverImage : `https://placehold.co/80x45/334155/e2e8f0?text=Capa`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Capa" class="py-4 px-6"><img src="${coverSrc}" alt="Capa de ${p.name}" class="w-20 h-12 rounded-md object-cover"></td>
+                    <td data-label="Nome" class="py-4 px-6 whitespace-nowrap font-semibold">${p.name}</td>
+                    <td data-label="Descrição" class="py-4 px-6 text-slate-400 text-sm">${p.description.substring(0, 50)}${p.description.length > 50 ? '...' : ''}</td>
+                    <td data-label="Ações" class="py-4 px-6 whitespace-nowrap">
+                        <button class="text-sky-400 hover:text-sky-300 mr-4" onclick="handleEdit('${p.id}')">Editar</button>
+                        <button class="text-red-500 hover:text-red-400" onclick="handleDelete('${p.id}')">Excluir</button>
+                    </td>`;
+                portfolioTableBody.appendChild(tr);
+            });
+        }
+
+        function openModal(p = null) {
+            portfolioForm.reset();
+            coverPreview.src = 'https://placehold.co/600x300/334155/e2e8f0?text=Capa';
+            if (p) {
+                modalTitle.textContent = 'Editar Portfólio';
+                portfolioIdInput.value = p.id;
+                document.getElementById('name').value = p.name;
+                document.getElementById('description').value = p.description;
+                if (p.coverImage) coverPreview.src = p.coverImage;
+            } else {
+                modalTitle.textContent = 'Adicionar Novo Portfólio';
+                portfolioIdInput.value = '';
+            }
+            portfolioModal.classList.remove('hidden');
+        }
+
+        function closeModal() { portfolioModal.classList.add('hidden'); }
+        coverImageInput.addEventListener('change', () => { const file = coverImageInput.files[0]; if (file) { const reader = new FileReader(); reader.onload = (e) => { coverPreview.src = e.target.result; }; reader.readAsDataURL(file); } });
+        window.handleEdit = (id) => { const p = portfoliosCache.find(p => p.id === id); if (p) openModal(p); };
+        window.handleDelete = (id) => { if (confirm('Tem certeza?')) { let portfolios = db.getPortfolios(); portfolios = portfolios.filter(p => p.id !== id); db.savePortfolios(portfolios); renderTable(); } };
+        addPortfolioBtn.addEventListener('click', () => openModal());
+        cancelBtn.addEventListener('click', closeModal);
+
+        portfolioForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const portfolios = db.getPortfolios();
+            const id = portfolioIdInput.value;
+            const name = document.getElementById('name').value;
+            const description = document.getElementById('description').value;
+            const file = coverImageInput.files[0];
+
+            const handleSave = (coverData) => {
+                if (id) {
+                    const p = portfolios.find(p => p.id === id);
+                    p.name = name; p.description = description;
+                    if (coverData) p.coverImage = coverData;
+                } else {
+                    portfolios.push({ id: crypto.randomUUID(), name, description, coverImage: coverData });
+                }
+                db.savePortfolios(portfolios);
+                renderTable();
+                closeModal();
+            };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { handleSave(e.target.result); };
+                reader.readAsDataURL(file);
+            } else {
+                handleSave(id ? portfolios.find(p => p.id === id).coverImage : null);
+            }
+        });
+        
+        function setWelcomeMessage() {
+            const loggedInUserName = localStorage.getItem('loggedInUserName');
+            if(loggedInUserName) {
+                const firstName = loggedInUserName.split(' ')[0];
+                document.getElementById('welcome-name').textContent = firstName;
+                document.getElementById('welcome-name-mobile').textContent = firstName;
+            }
+        }
+
+        renderTable();
+        setWelcomeMessage();
+    });
+    </script>
+
+</body>
+</html>
