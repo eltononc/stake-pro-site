@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Usuários - Stake Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-y: auto;
+        }
+        #backgroundCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            background-color: #334155;
+        }
+        /* Estilos para a caixa de diálogo de confirmação personalizada */
+        .confirm-dialog-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .confirm-dialog {
+            background-color: #1e293b;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 24rem;
+        }
+        @media (max-width: 768px) {
+            .responsive-table thead { display: none; }
+            .responsive-table tr { display: block; margin-bottom: 1rem; border-bottom: 2px solid #1e293b; padding-bottom: 1rem; }
+            .responsive-table td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #334155; }
+            .responsive-table td:last-child { border-bottom: none; }
+            .responsive-table td::before { content: attr(data-label); font-weight: 600; margin-right: 1rem; color: #94a3b8; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900">
+    
+    <canvas id="backgroundCanvas"></canvas>
+
+    <div id="redirectOverlay" class="hidden fixed inset-0 bg-slate-900 flex-col items-center justify-center text-center p-4 z-50">
+        <h2 class="text-2xl font-bold text-white mb-4">Acesso Negado</h2>
+        <p class="text-slate-300">Você não está autenticado.</p>
+    </div>
+
+    <div class="flex flex-col min-h-screen" id="main-container">
+        <!-- Navbar Integrada -->
+        <header class="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center">
+                            <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="mr-3"><defs><filter id="dropshadow"><feDropShadow dx="3" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.4"/></filter><linearGradient id="blueGradient1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#007bff;stop-opacity:1" /><stop offset="100%" style="stop-color:#0056b3;stop-opacity:1" /></linearGradient><linearGradient id="greenGradient1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#28a745;stop-opacity:1" /><stop offset="100%" style="stop-color:#1e7e34;stop-opacity:1" /></linearGradient></defs><g filter="url(#dropshadow)"><path d="M 50 5 C 20 5 5 20 5 50 C 5 80 20 95 50 95 C 80 95 95 80 95 50 C 95 20 80 5 50 5 Z" fill="url(#blueGradient1)"/><path d="M 50 5 C 50 5 70 15 80 30 C 90 45 80 65 70 70 C 60 75 40 85 20 80 C 0 75 5 50 5 50" fill="url(#greenGradient1)"/></g></svg>
+                            <h1 class="text-white font-bold text-lg" style="font-family: 'Montserrat', sans-serif;">Stake <span class="text-green-400">Pro</span></h1>
+                        </div>
+                        <nav class="hidden md:block ml-10">
+                            <div class="flex items-baseline space-x-4">
+                                <a href="dashboard.html" class="text-slate-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                                <a href="users.html" class="text-white bg-slate-800 px-3 py-2 rounded-md text-sm font-medium" aria-current="page">Usuários</a>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="hidden md:block">
+                         <div class="ml-4 flex items-center md:ml-6">
+                             <span class="text-slate-300 text-sm mr-3">Olá, Administrador!</span>
+                             <button id="logoutButton" class="bg-slate-700 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Sair</button>
+                         </div>
+                    </div>
+                    <div class="-mr-2 flex md:hidden">
+                        <button id="mobile-menu-button" type="button" class="bg-slate-800 inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-white" aria-controls="mobile-menu" aria-expanded="false">
+                            <span class="sr-only">Abrir menu</span>
+                            <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            <svg class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="dashboard.html" class="text-slate-300 hover:text-white block px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
+                    <a href="users.html" class="text-white bg-slate-800 block px-3 py-2 rounded-md text-base font-medium" aria-current="page">Usuários</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-slate-700">
+                    <div class="flex items-center px-5">
+                        <div class="ml-3"><div class="text-base font-medium leading-none text-white">Administrador</div></div>
+                    </div>
+                    <div class="mt-3 px-2 space-y-1">
+                        <a href="#" id="logoutButtonMobile" class="block px-3 py-2 rounded-md text-base font-medium text-slate-400 hover:text-white hover:bg-slate-700">Sair</a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow p-4 md:p-6">
+            <div class="max-w-7xl mx-auto">
+                <header class="flex justify-between items-center mb-8">
+                    <h1 class="text-3xl font-bold">Gerenciamento de Usuários</h1>
+                    <button id="addUserBtn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center">
+                        <svg class="w-5 h-5 mr-0 md:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        <span class="hidden md:inline">Adicionar Usuário</span>
+                    </button>
+                </header>
+                <div class="bg-slate-800/80 backdrop-blur-sm rounded-lg shadow-lg overflow-x-auto">
+                    <table class="min-w-full responsive-table">
+                        <thead class="bg-slate-700/50">
+                            <tr>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Avatar</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Nome</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Email</th>
+                                <th class="py-3 px-6 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="divide-y divide-slate-700">
+                           <!-- Linhas de usuários serão inseridas aqui pelo JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div id="userModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+        <div class="bg-slate-800 rounded-lg shadow-xl w-full max-w-md p-6 md:p-8">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-6">Adicionar Novo Usuário</h2>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="flex items-center gap-4 mb-4">
+                    <img id="avatarPreview" src="https://placehold.co/80x80/334155/e2e8f0?text=Foto" class="avatar-preview rounded-full object-cover">
+                    <div>
+                        <label for="avatar" class="block text-sm font-medium text-slate-300 mb-2">Foto do Perfil (Opcional)</label>
+                        <input type="file" id="avatar" name="avatar" accept="image/*" class="w-full text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-700">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Nome</label>
+                    <input type="text" id="name" name="name" required class="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-slate-300 mb-2">Email</label>
+                    <input type="email" id="email" name="email" required class="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-slate-300 mb-2">Senha</label>
+                    <input type="password" id="password" name="password" class="w-full px-4 py-2 rounded-lg bg-slate-700 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <p class="text-xs text-slate-500 mt-1">Deixe em branco para não alterar.</p>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" id="cancelBtn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                    <button type="submit" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Dialog -->
+    <div id="confirmDialog" class="hidden confirm-dialog-backdrop">
+        <div class="confirm-dialog">
+            <h3 id="confirmTitle" class="text-lg font-bold text-white mb-4">Confirmar Ação</h3>
+            <p id="confirmMessage" class="text-slate-300 mb-6">Você tem certeza que deseja executar esta ação?</p>
+            <div class="flex justify-end gap-4">
+                <button id="confirmCancelBtn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                <button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Autenticação ---
+        const mainContainer = document.getElementById('main-container');
+        const redirectOverlay = document.getElementById('redirectOverlay');
+        const isPreview = window.location.protocol === 'blob:' || window.location.hostname.includes('usercontent.goog');
+        
+        if (localStorage.getItem('isAdminLoggedIn') !== 'true') {
+            if (isPreview) {
+                mainContainer.classList.add('hidden');
+                redirectOverlay.classList.remove('hidden');
+            } else {
+                window.location.href = 'index.html';
+            }
+            return;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('isAdminLoggedIn');
+            if (isPreview) {
+                mainContainer.classList.add('hidden');
+                redirectOverlay.classList.remove('hidden');
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+        document.getElementById('logoutButton').addEventListener('click', handleLogout);
+        document.getElementById('logoutButtonMobile').addEventListener('click', handleLogout);
+
+        // --- Menu Mobile ---
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // --- Elementos do DOM ---
+        const userTableBody = document.getElementById('userTableBody');
+        const addUserBtn = document.getElementById('addUserBtn');
+        const userModal = document.getElementById('userModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const userForm = document.getElementById('userForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const userIdInput = document.getElementById('userId');
+        const passwordInput = document.getElementById('password');
+        const avatarInput = document.getElementById('avatar');
+        const avatarPreview = document.getElementById('avatarPreview');
+
+        // --- Cache de usuários para evitar múltiplas buscas ---
+        let usersCache = [];
+        const API_BASE_URL = '/.netlify/functions';
+
+        // --- Funções da API (Comunicação com Netlify Functions) ---
+        
+        /**
+         * Lida com erros de fetch, tentando extrair uma mensagem detalhada.
+         * @param {Response} response - O objeto de resposta do fetch.
+         * @param {string} action - A ação que estava sendo tentada (ex: 'carregar usuários').
+         */
+        async function handleFetchError(response, action) {
+            let errorDetails = '';
+            try {
+                // Tenta ler o corpo da resposta como texto para obter mais detalhes do erro
+                errorDetails = await response.text();
+            } catch (e) {
+                // Ignora erros ao ler o corpo, a mensagem de status é suficiente
+            }
+            const errorMessage = `Erro na API: ${response.status} ${response.statusText}. Ação: ${action}. Detalhes: ${errorDetails}`;
+            console.error(errorMessage);
+            showError(`Não foi possível ${action}.`);
+        }
+
+        /**
+         * Busca todos os usuários da API.
+         * @returns {Promise<Array>} Uma promessa que resolve para a lista de usuários.
+         */
+        async function apiGetUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users-read`);
+                if (!response.ok) {
+                    await handleFetchError(response, 'carregar usuários');
+                    return [];
+                }
+                const users = await response.json();
+                usersCache = users; // Atualiza o cache
+                return users;
+            } catch (error) {
+                console.error("Falha de rede ou JS ao buscar usuários:", error);
+                showError("Não foi possível carregar os usuários.");
+                return []; // Retorna array vazio em caso de erro
+            }
+        }
+
+        /**
+         * Cria um novo usuário via API.
+         * @param {object} userData - Os dados do novo usuário.
+         * @returns {Promise<object|null>} Uma promessa que resolve para o usuário criado ou nulo em caso de erro.
+         */
+        async function apiCreateUser(userData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users-create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+                if (!response.ok) {
+                    await handleFetchError(response, 'criar o usuário');
+                    return null;
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Erro de rede ou JS ao criar usuário:", error);
+                showError("Não foi possível criar o usuário.");
+                return null;
+            }
+        }
+
+        /**
+         * Atualiza um usuário existente via API.
+         * @param {string} id - O ID do usuário a ser atualizado.
+         * @param {object} userData - Os novos dados do usuário.
+         * @returns {Promise<object|null>} Uma promessa que resolve para o usuário atualizado ou nulo em caso de erro.
+         */
+        async function apiUpdateUser(id, userData) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users-update`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, ...userData })
+                });
+                if (!response.ok) {
+                    await handleFetchError(response, 'atualizar o usuário');
+                    return null;
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("Erro de rede ou JS ao atualizar usuário:", error);
+                showError("Não foi possível atualizar o usuário.");
+                return null;
+            }
+        }
+
+        /**
+         * Deleta um usuário via API.
+         * @param {string} id - O ID do usuário a ser deletado.
+         * @returns {Promise<boolean>} Retorna true em sucesso, false em erro.
+         */
+        async function apiDeleteUser(id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users-delete`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id })
+                });
+                if (!response.ok) {
+                    await handleFetchError(response, 'deletar o usuário');
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                console.error("Erro de rede ou JS ao deletar usuário:", error);
+                showError("Não foi possível deletar o usuário.");
+                return false;
+            }
+        }
+
+        // --- Renderização e Manipulação do DOM ---
+
+        /**
+         * Renderiza a tabela de usuários.
+         */
+        async function renderTable() {
+            userTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">Carregando...</td></tr>';
+            const users = await apiGetUsers();
+            userTableBody.innerHTML = '';
+            if (!users || users.length === 0) {
+                userTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">Nenhum usuário cadastrado.</td></tr>';
+                return;
+            }
+            users.forEach(user => {
+                const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const avatarSrc = user.avatar ? user.avatar : `https://placehold.co/40x40/334155/e2e8f0?text=${initials}`;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td data-label="Avatar" class="py-4 px-6"><img src="${avatarSrc}" alt="Avatar de ${user.name}" class="w-10 h-10 rounded-full object-cover"></td>
+                    <td data-label="Nome" class="py-4 px-6 whitespace-nowrap">${user.name}</td>
+                    <td data-label="Email" class="py-4 px-6 whitespace-nowrap">${user.email}</td>
+                    <td data-label="Ações" class="py-4 px-6 whitespace-nowrap">
+                        <button class="text-sky-400 hover:text-sky-300 mr-4" onclick="window.handleEdit('${user.id}')">Editar</button>
+                        <button class="text-red-500 hover:text-red-400" onclick="window.handleDelete('${user.id}')">Excluir</button>
+                    </td>`;
+                userTableBody.appendChild(tr);
+            });
+        }
+
+        function openModal(user = null) {
+            userForm.reset();
+            avatarPreview.src = 'https://placehold.co/80x80/334155/e2e8f0?text=Foto';
+            if (user) {
+                modalTitle.textContent = 'Editar Usuário';
+                userIdInput.value = user.id;
+                document.getElementById('name').value = user.name;
+                document.getElementById('email').value = user.email;
+                if (user.avatar) avatarPreview.src = user.avatar;
+                passwordInput.placeholder = "Deixe em branco para não alterar";
+                passwordInput.required = false;
+            } else {
+                modalTitle.textContent = 'Adicionar Novo Usuário';
+                userIdInput.value = '';
+                passwordInput.placeholder = "Senha obrigatória";
+                passwordInput.required = true;
+            }
+            userModal.classList.remove('hidden');
+        }
+
+        function closeModal() { userModal.classList.add('hidden'); }
+        
+        // --- Handlers de Eventos ---
+        
+        avatarInput.addEventListener('change', () => { 
+            const file = avatarInput.files[0]; 
+            if (file) { 
+                const reader = new FileReader(); 
+                reader.onload = (e) => { avatarPreview.src = e.target.result; }; 
+                reader.readAsDataURL(file); 
+            } 
+        });
+
+        window.handleEdit = (id) => { 
+            const user = usersCache.find(u => u.id === id); 
+            if (user) openModal(user); 
+        };
+
+        window.handleDelete = (id) => {
+            showConfirm('Tem certeza que deseja excluir este usuário?', async () => {
+                const success = await apiDeleteUser(id);
+                if (success) {
+                    await renderTable();
+                }
+            });
+        };
+
+        addUserBtn.addEventListener('click', () => openModal());
+        cancelBtn.addEventListener('click', closeModal);
+
+        userForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = userIdInput.value;
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const password = passwordInput.value;
+            const file = avatarInput.files[0];
+
+            const processSubmit = async (avatarData) => {
+                const userData = { name, email };
+                if (password) userData.password = password;
+                if (avatarData) userData.avatar = avatarData;
+
+                let result;
+                if (id) { // Editando
+                    result = await apiUpdateUser(id, userData);
+                } else { // Criando
+                    result = await apiCreateUser(userData);
+                }
+
+                if (result) { // Se a operação da API foi bem-sucedida
+                    await renderTable();
+                    closeModal();
+                }
+            };
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { processSubmit(e.target.result); };
+                reader.readAsDataURL(file);
+            } else {
+                const existingAvatar = id ? (usersCache.find(u => u.id === id)?.avatar || null) : null;
+                processSubmit(existingAvatar);
+            }
+        });
+
+        // --- Funções Utilitárias (Confirmação e Erro) ---
+        
+        const confirmDialog = document.getElementById('confirmDialog');
+        const confirmTitle = document.getElementById('confirmTitle');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmOkBtn = document.getElementById('confirmOkBtn');
+        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+        let confirmCallback = null;
+
+        function showConfirm(message, callback, title = 'Confirmar Ação') {
+            confirmMessage.textContent = message;
+            confirmTitle.textContent = title;
+            confirmCallback = callback;
+            confirmDialog.classList.remove('hidden');
+        }
+
+        confirmOkBtn.addEventListener('click', () => {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            confirmDialog.classList.add('hidden');
+        });
+
+        confirmCancelBtn.addEventListener('click', () => {
+            confirmDialog.classList.add('hidden');
+        });
+
+        function showError(message) {
+            // Você pode implementar um modal de erro mais sofisticado aqui
+            alert(`Erro: ${message}`);
+        }
+        
+        // --- Inicialização ---
+        renderTable();
+    });
+    </script>
+
+</body>
+</html>
