@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+const { initializeApp, getApps, getApp } = require("firebase/app");
+const { getFirestore, collection, addDoc } = require("firebase/firestore");
 
 // --- Firebase Initialization Otimizada ---
 let app;
