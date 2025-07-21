@@ -244,28 +244,18 @@
 
         // --- Funções da API (Comunicação com Netlify Functions) ---
         
-        /**
-         * Lida com erros de fetch, tentando extrair uma mensagem detalhada.
-         * @param {Response} response - O objeto de resposta do fetch.
-         * @param {string} action - A ação que estava sendo tentada (ex: 'carregar usuários').
-         */
         async function handleFetchError(response, action) {
             let errorDetails = '';
             try {
-                // Tenta ler o corpo da resposta como texto para obter mais detalhes do erro
                 errorDetails = await response.text();
             } catch (e) {
-                // Ignora erros ao ler o corpo, a mensagem de status é suficiente
+                // Ignora erros
             }
             const errorMessage = `Erro na API: ${response.status} ${response.statusText}. Ação: ${action}. Detalhes: ${errorDetails}`;
             console.error(errorMessage);
-            showError(`Não foi possível ${action}.`);
+            showError(`Não foi possível ${action}. Verifique o console para detalhes.`);
         }
 
-        /**
-         * Busca todos os usuários da API.
-         * @returns {Promise<Array>} Uma promessa que resolve para a lista de usuários.
-         */
         async function apiGetUsers() {
             try {
                 const response = await fetch(`${API_BASE_URL}/users-read`);
@@ -274,22 +264,21 @@
                     return [];
                 }
                 const users = await response.json();
-                usersCache = users; // Atualiza o cache
+                usersCache = users;
                 return users;
             } catch (error) {
-                console.error("Falha de rede ou JS ao buscar usuários:", error);
-                showError("Não foi possível carregar os usuários.");
-                return []; // Retorna array vazio em caso de erro
+                console.error("--- ERRO DETALHADO (apiGetUsers) ---");
+                console.error("Tipo de Erro:", error.name);
+                console.error("Mensagem de Erro:", error.message);
+                console.error("Objeto do Erro:", error);
+                showError("Não foi possível carregar os usuários. Verifique o console para detalhes.");
+                return [];
             }
         }
 
-        /**
-         * Cria um novo usuário via API.
-         * @param {object} userData - Os dados do novo usuário.
-         * @returns {Promise<object|null>} Uma promessa que resolve para o usuário criado ou nulo em caso de erro.
-         */
         async function apiCreateUser(userData) {
             try {
+                console.log("Tentando criar usuário com os seguintes dados:", userData);
                 const response = await fetch(`${API_BASE_URL}/users-create`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -301,18 +290,15 @@
                 }
                 return await response.json();
             } catch (error) {
-                console.error("Erro de rede ou JS ao criar usuário:", error);
-                showError("Não foi possível criar o usuário.");
+                console.error("--- ERRO DETALHADO (apiCreateUser) ---");
+                console.error("Tipo de Erro:", error.name);
+                console.error("Mensagem de Erro:", error.message);
+                console.error("Objeto do Erro:", error);
+                showError("Não foi possível criar o usuário. Verifique o console para detalhes.");
                 return null;
             }
         }
 
-        /**
-         * Atualiza um usuário existente via API.
-         * @param {string} id - O ID do usuário a ser atualizado.
-         * @param {object} userData - Os novos dados do usuário.
-         * @returns {Promise<object|null>} Uma promessa que resolve para o usuário atualizado ou nulo em caso de erro.
-         */
         async function apiUpdateUser(id, userData) {
             try {
                 const response = await fetch(`${API_BASE_URL}/users-update`, {
@@ -326,17 +312,15 @@
                 }
                 return await response.json();
             } catch (error) {
-                console.error("Erro de rede ou JS ao atualizar usuário:", error);
-                showError("Não foi possível atualizar o usuário.");
+                console.error("--- ERRO DETALHADO (apiUpdateUser) ---");
+                console.error("Tipo de Erro:", error.name);
+                console.error("Mensagem de Erro:", error.message);
+                console.error("Objeto do Erro:", error);
+                showError("Não foi possível atualizar o usuário. Verifique o console para detalhes.");
                 return null;
             }
         }
 
-        /**
-         * Deleta um usuário via API.
-         * @param {string} id - O ID do usuário a ser deletado.
-         * @returns {Promise<boolean>} Retorna true em sucesso, false em erro.
-         */
         async function apiDeleteUser(id) {
             try {
                 const response = await fetch(`${API_BASE_URL}/users-delete`, {
@@ -350,17 +334,17 @@
                 }
                 return true;
             } catch (error) {
-                console.error("Erro de rede ou JS ao deletar usuário:", error);
-                showError("Não foi possível deletar o usuário.");
+                console.error("--- ERRO DETALHADO (apiDeleteUser) ---");
+                console.error("Tipo de Erro:", error.name);
+                console.error("Mensagem de Erro:", error.message);
+                console.error("Objeto do Erro:", error);
+                showError("Não foi possível deletar o usuário. Verifique o console para detalhes.");
                 return false;
             }
         }
 
         // --- Renderização e Manipulação do DOM ---
 
-        /**
-         * Renderiza a tabela de usuários.
-         */
         async function renderTable() {
             userTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-500">Carregando...</td></tr>';
             const users = await apiGetUsers();
@@ -449,13 +433,13 @@
                 if (avatarData) userData.avatar = avatarData;
 
                 let result;
-                if (id) { // Editando
+                if (id) {
                     result = await apiUpdateUser(id, userData);
-                } else { // Criando
+                } else {
                     result = await apiCreateUser(userData);
                 }
 
-                if (result) { // Se a operação da API foi bem-sucedida
+                if (result) {
                     await renderTable();
                     closeModal();
                 }
@@ -499,7 +483,6 @@
         });
 
         function showError(message) {
-            // Você pode implementar um modal de erro mais sofisticado aqui
             alert(`Erro: ${message}`);
         }
         
