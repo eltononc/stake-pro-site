@@ -267,10 +267,9 @@
                 usersCache = users;
                 return users;
             } catch (error) {
-                console.error("--- ERRO DETALHADO (apiGetUsers) ---");
-                console.error("Tipo de Erro:", error.name);
-                console.error("Mensagem de Erro:", error.message);
-                console.error("Objeto do Erro:", error);
+                console.log("--- CAPTURADO UM ERRO EM apiGetUsers ---");
+                console.log("Mensagem:", error.message);
+                console.dir(error);
                 showError("Não foi possível carregar os usuários. Verifique o console para detalhes.");
                 return [];
             }
@@ -290,10 +289,9 @@
                 }
                 return await response.json();
             } catch (error) {
-                console.error("--- ERRO DETALHADO (apiCreateUser) ---");
-                console.error("Tipo de Erro:", error.name);
-                console.error("Mensagem de Erro:", error.message);
-                console.error("Objeto do Erro:", error);
+                console.log("--- CAPTURADO UM ERRO EM apiCreateUser ---");
+                console.log("Mensagem:", error.message);
+                console.dir(error);
                 showError("Não foi possível criar o usuário. Verifique o console para detalhes.");
                 return null;
             }
@@ -312,10 +310,9 @@
                 }
                 return await response.json();
             } catch (error) {
-                console.error("--- ERRO DETALHADO (apiUpdateUser) ---");
-                console.error("Tipo de Erro:", error.name);
-                console.error("Mensagem de Erro:", error.message);
-                console.error("Objeto do Erro:", error);
+                console.log("--- CAPTURADO UM ERRO EM apiUpdateUser ---");
+                console.log("Mensagem:", error.message);
+                console.dir(error);
                 showError("Não foi possível atualizar o usuário. Verifique o console para detalhes.");
                 return null;
             }
@@ -334,10 +331,9 @@
                 }
                 return true;
             } catch (error) {
-                console.error("--- ERRO DETALHADO (apiDeleteUser) ---");
-                console.error("Tipo de Erro:", error.name);
-                console.error("Mensagem de Erro:", error.message);
-                console.error("Objeto do Erro:", error);
+                console.log("--- CAPTURADO UM ERRO EM apiDeleteUser ---");
+                console.log("Mensagem:", error.message);
+                console.dir(error);
                 showError("Não foi possível deletar o usuário. Verifique o console para detalhes.");
                 return false;
             }
