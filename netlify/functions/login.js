@@ -1,60 +1,52 @@
-const fs = require('fs');
-const path = require('path');
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 
-// Caminho para o ficheiro que serve como banco de dados
-const dbPath = path.resolve(__dirname, 'users-db.json');
-
-// Função segura para ler o banco de dados
-const readDatabase = () => {
-  try {
-    // Se o ficheiro não existir, retorna uma lista vazia
-    if (!fs.existsSync(dbPath)) {
-      return [];
-    }
-    const dbRaw = fs.readFileSync(dbPath, 'utf-8');
-    // Se o ficheiro estiver vazio, retorna uma lista vazia, senão, interpreta o JSON
-    return dbRaw.trim() === '' ? [] : JSON.parse(dbRaw);
-  } catch (error) {
-    console.error("Erro ao ler o banco de dados, a retornar uma lista vazia.", error);
-    return [];
-  }
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
 };
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 exports.handler = async (event, context) => {
-  // Permite apenas requisições do tipo POST
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405, // Method Not Allowed
-      body: JSON.stringify({ message: 'Apenas o método POST é permitido' }),
-    };
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
     const { email, password } = JSON.parse(event.body);
 
-    // Validação simples
     if (!email || !password) {
       return {
-        statusCode: 400, // Bad Request
+        statusCode: 400,
         body: JSON.stringify({ message: 'Email e senha são obrigatórios.' }),
       };
     }
 
-    const users = readDatabase();
+    // Cria uma consulta para encontrar um usuário com o email e senha correspondentes
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("email", "==", email), where("password", "==", password));
+    
+    const querySnapshot = await getDocs(q);
 
-    // Procura por um usuário com o email e senha correspondentes
-    const foundUser = users.find(user => user.email === email && user.password === password);
-
-    if (foundUser) {
-      // Usuário encontrado, retorna sucesso
+    if (!querySnapshot.empty) {
+      // Usuário encontrado
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      
       return {
         statusCode: 200,
-        body: JSON.stringify({ message: 'Login bem-sucedido!', user: { id: foundUser.id, name: foundUser.name, email: foundUser.email } }),
+        body: JSON.stringify({ message: 'Login bem-sucedido!', user: { id: userDoc.id, name: userData.name, email: userData.email } }),
       };
     } else {
-      // Usuário não encontrado ou senha incorreta
+      // Usuário não encontrado
       return {
-        statusCode: 401, // Unauthorized
+        statusCode: 401,
         body: JSON.stringify({ message: 'Email ou senha inválidos.' }),
       };
     }

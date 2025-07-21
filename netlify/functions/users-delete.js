@@ -1,17 +1,17 @@
-const fs = require('fs');
-const path = require('path');
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, deleteDoc } from "firebase/firestore";
 
-const dbPath = path.resolve(__dirname, 'users-db.json');
-
-const readDatabase = () => {
-  try {
-    if (!fs.existsSync(dbPath)) return [];
-    const dbRaw = fs.readFileSync(dbPath, 'utf-8');
-    return dbRaw.trim() === '' ? [] : JSON.parse(dbRaw);
-  } catch (error) {
-    return [];
-  }
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID,
 };
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 exports.handler = async (event, context) => {
   if (event.httpMethod !== 'DELETE') {
@@ -22,25 +22,15 @@ exports.handler = async (event, context) => {
     const { id } = JSON.parse(event.body);
 
     if (!id) {
-        return { statusCode: 400, body: JSON.stringify({ message: 'ID do usuário é obrigatório.' }) };
+      return { statusCode: 400, body: JSON.stringify({ message: 'ID do usuário é obrigatório.' }) };
     }
 
-    let users = readDatabase();
-    
-    const initialLength = users.length;
-    users = users.filter(u => u.id !== id);
-
-    if (users.length === initialLength) {
-        return { statusCode: 404, body: JSON.stringify({ message: 'Usuário não encontrado para deletar.' }) };
-    }
-
-    fs.writeFileSync(dbPath, JSON.stringify(users, null, 2));
+    await deleteDoc(doc(db, "users", id));
 
     return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Usuário deletado com sucesso.' }),
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Usuário deletado com sucesso.' }),
     };
-
   } catch (error) {
     console.error('Erro ao deletar usuário:', error);
     return {
